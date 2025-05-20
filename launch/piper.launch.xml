@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+  
+  <arg name="model_path" default="/home/mbosch/Software/piper/ca_ES-upc_ona-medium.onnx" />
+  
+  <node pkg="ros_piper" exec="piper" name="piper">
+    <param name="model_path" value="$(var model_path)" />
+  </node>
+</launch>
