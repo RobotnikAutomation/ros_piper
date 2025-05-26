@@ -20,7 +20,7 @@ pip install piper-tts numpy sounddevice
 
 Launch the main node:
 ```bash
-roslaunch ros_piper piper.launch.xml model_path:=PATH_TO_ONNX_MODEL
+ros2 launch ros_piper piper.launch.xml model_path:=PATH_TO_ONNX_MODEL
 ```
 
 You may put your voide models in the folder ```resource/models```.
