@@ -13,8 +13,10 @@ ROS Piper is a package that integrates the [Piper](https://github.com/rhasspy/pi
 - piper-tts, numpy, sounddevice
 
 ```
-pip install piper-tts numpy sounddevice
-``` 
+pip3 install piper-tts numpy sounddevice
+```
+
+> Warning: This step is done manually, as the `piper-tts` package is not available in the ROS repositories.
 
 ## Usage
 
