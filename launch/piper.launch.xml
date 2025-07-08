@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <launch>
   
-  <arg name="model_path" default="/home/mbosch/Software/piper/ca_ES-upc_ona-medium.onnx" />
+  <arg name="model_path" default="$(find-pkg-share ros_piper)/resource/models/en_US-john-medium.onnx" />
   
   <node pkg="ros_piper" exec="piper" name="piper">
-    <param name="model_path" value="$(var model_path)" />
+    <!-- param name="model_path" value="$(var model_path)" /-->
+    <param name="model_path" value="/home/robot/devel_ws/install/ros_piper/share/ros_piper/resource/models/en_US-john-medium.onnx" />
   </node>
 </launch>
