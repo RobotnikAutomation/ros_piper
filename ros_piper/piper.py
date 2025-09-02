@@ -19,9 +19,54 @@ from robotnik_common_msgs.srv import SetString
 from rcl_interfaces.msg import SetParametersResult
 
 import sys
+import os
 import numpy as np
 import sounddevice as sd
 from piper.voice import PiperVoice
+
+from pathlib import Path
+import urllib.request
+import sys
+
+def download(url: str, dest: Path) -> None:
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    tmp = dest.with_suffix(dest.suffix + ".tmp")
+
+    try:
+        with urllib.request.urlopen(url) as r, open(tmp, "wb") as f:
+            total = r.length or 0  # Content-Length may be None
+            read = 0
+            block = 1024 * 1024  # 1 MiB
+
+            while True:
+                chunk = r.read(block)
+                if not chunk:
+                    break
+                f.write(chunk)
+                read += len(chunk)
+                if total:
+                    done = int(50 * read / total)
+                    sys.stdout.write(
+                        f"\r[{'=' * done}{'.' * (50 - done)}] "
+                        f"{read/1024/1024:.1f}/{total/1024/1024:.1f} MB"
+                    )
+                else:
+                    sys.stdout.write(f"\rDownloaded {read/1024/1024:.1f} MB")
+                sys.stdout.flush()
+        os.replace(tmp, dest)  # atomic move
+        print(f"\nSaved: {dest}")
+    except Exception as e:
+        try:
+            if tmp.exists():
+                tmp.unlink()
+        except Exception:
+            pass
+        raise RuntimeError(f"Download failed: {e}")
+
+MODEL_NAME = "en_US-john-medium.onnx"
+MODEL_CDN = f"https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US/john/medium/{MODEL_NAME}"
+CONFIG_CDN = f"https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US/john/medium/{MODEL_NAME}.json"
+LOCAL_DEST = Path.home() / ".config" / "piper" / "models" / "en_US-john-medium.onnx"
 
 class RosPiper(Node):
     def __init__(self):
@@ -30,7 +75,7 @@ class RosPiper(Node):
         self.voice = None
         self.stream = None
         self.add_on_set_parameters_callback(self.parameter_callback)
-        self.declare_parameter('model_path', '') 
+        self.declare_parameter('model_path', str(LOCAL_DEST))
         
         self.subscription = self.create_subscription(
             String,
@@ -47,9 +92,22 @@ class RosPiper(Node):
             self.voice = None
             self.stream = None
             return False
+
+        try:
+            if not os.path.exists(self.model_path):
+                self.get_logger().info(f'Model not found, downloading from {MODEL_CDN}')
+                download(MODEL_CDN, LOCAL_DEST)
+            if not os.path.exists(f"{LOCAL_DEST}.json"):
+                self.get_logger().info(f'Config not found, downloading from {CONFIG_CDN}')
+                download(CONFIG_CDN, LOCAL_DEST.with_suffix(LOCAL_DEST.suffix + ".json"))
+        except Exception as e:
+            self.get_logger().error(f'Error downloading model: {e}')
+            return False
+
         try:
             self.voice = PiperVoice.load(self.model_path)
             self.stream = sd.OutputStream(samplerate=self.voice.config.sample_rate, channels=1, dtype='int16')
+            self.get_logger().info(f'Model and stream created successfully with model at: {self.model_path}')
             return True
         except Exception as e:
             self.get_logger().error(f'Error creating model and stream: {e}')
