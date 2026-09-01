@@ -150,8 +150,8 @@ class RosPiper(Node):
             return False
 
         self.stream.start()
-        for audio_bytes in self.voice.synthesize_stream_raw(text):
-            int_data = np.frombuffer(audio_bytes, dtype=np.int16)
+        for audio_chunk in self.voice.synthesize(text):
+            int_data = np.frombuffer(audio_chunk.audio_int16_bytes, dtype=np.int16)
             self.stream.write(int_data)
         self.stream.stop()
 
