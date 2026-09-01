@@ -64,9 +64,21 @@ def download(url: str, dest: Path) -> None:
         raise RuntimeError(f"Download failed: {e}")
 
 MODEL_NAME = "en_US-john-medium.onnx"
-MODEL_CDN = f"https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US/john/medium/{MODEL_NAME}"
-CONFIG_CDN = f"https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US/john/medium/{MODEL_NAME}.json"
-LOCAL_DEST = Path.home() / ".config" / "piper" / "models" / "en_US-john-medium.onnx"
+LOCAL_DEST = Path.home() / ".config" / "piper" / "models" / MODEL_NAME
+PIPER_VOICES_BASE_URL = "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0"
+
+
+def model_cdn_url(model_path: Path) -> str:
+    """Build the huggingface piper-voices download URL for a model file.
+
+    Model file names follow the pattern "{lang}_{COUNTRY}-{name}-{quality}.onnx",
+    e.g. "es_ES-davefx-medium.onnx", which maps to the remote path
+    "es/es_ES/davefx/medium/es_ES-davefx-medium.onnx".
+    """
+    stem = model_path.stem
+    lang_country, name, quality = stem.split("-")
+    lang = lang_country.split("_")[0]
+    return f"{PIPER_VOICES_BASE_URL}/{lang}/{lang_country}/{name}/{quality}/{model_path.name}"
 
 class RosPiper(Node):
     def __init__(self):
@@ -94,12 +106,16 @@ class RosPiper(Node):
             return False
 
         try:
-            if not os.path.exists(self.model_path):
-                self.get_logger().info(f'Model not found, downloading from {MODEL_CDN}')
-                download(MODEL_CDN, LOCAL_DEST)
-            if not os.path.exists(f"{LOCAL_DEST}.json"):
-                self.get_logger().info(f'Config not found, downloading from {CONFIG_CDN}')
-                download(CONFIG_CDN, LOCAL_DEST.with_suffix(LOCAL_DEST.suffix + ".json"))
+            model_dest = Path(self.model_path)
+            config_dest = model_dest.with_suffix(model_dest.suffix + ".json")
+            model_cdn = model_cdn_url(model_dest)
+            config_cdn = f"{model_cdn}.json"
+            if not os.path.exists(model_dest):
+                self.get_logger().info(f'Model not found, downloading from {model_cdn}')
+                download(model_cdn, model_dest)
+            if not os.path.exists(config_dest):
+                self.get_logger().info(f'Config not found, downloading from {config_cdn}')
+                download(config_cdn, config_dest)
         except Exception as e:
             self.get_logger().error(f'Error downloading model: {e}')
             return False

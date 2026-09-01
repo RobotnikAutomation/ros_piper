@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <launch>
+  <arg name="model_path" default="$(env HOME)/.config/piper/models/en_US-john-medium.onnx" />
   <node pkg="ros_piper" exec="piper" name="piper">
     <!-- model is tried to be downloaded first time connected to internet -->
-    <param name="model_path" value="$(env HOME)/.config/piper/models/en_US-john-medium.onnx" />
+	  <param name="model_path" value="$(var model_path)" />
   </node>
 </launch>
